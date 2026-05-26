@@ -130,3 +130,59 @@ class Parameters:
     def government_response(self, level: int) -> dict[str, Any]:
         key = f"level_{level}"
         return dict(self.raw["government_response"][key])
+
+    # --- dynamics (Section 12) ---
+
+    @property
+    def shock_ramp_pct_per_month(self) -> float:
+        return float(self.get("dynamics", "shock_ramp_pct_per_month"))
+
+    def pass_through_lag(self, category: str) -> int:
+        return int(self.raw["dynamics"]["pass_through_lags_months"][category])
+
+    @property
+    def max_pass_through_lag(self) -> int:
+        lags = self.raw["dynamics"]["pass_through_lags_months"]
+        return max(int(lags["transport"]), int(lags["food"]), int(lags["utilities"]))
+
+    @property
+    def persistence_shock_months_threshold(self) -> int:
+        return int(self.get("dynamics", "persistence_shock_months_threshold"))
+
+    @property
+    def persistence_food_pass_through_boost(self) -> float:
+        return float(self.get("dynamics", "persistence_food_pass_through_boost"))
+
+    def coping_ladder(self, key: str) -> float:
+        return float(self.raw["dynamics"]["coping_ladder"][key])
+
+    @property
+    def transport_worker_erosion_monthly(self) -> float:
+        return float(self.get("dynamics", "transport_worker_erosion_monthly"))
+
+    @property
+    def transport_worker_erosion_floor(self) -> float:
+        return float(self.get("dynamics", "transport_worker_erosion_floor"))
+
+    @property
+    def transport_worker_recovery_monthly(self) -> float:
+        return float(self.get("dynamics", "transport_worker_recovery_monthly"))
+
+    @property
+    def policy_activation_lag_months(self) -> int:
+        return int(self.get("dynamics", "policy_activation_lag_months"))
+
+    @property
+    def policy_stress_boost_multiplier(self) -> float:
+        return float(self.get("dynamics", "policy_stress_boost_multiplier"))
+
+    @property
+    def class_downgrade_persistence_months(self) -> int:
+        return int(self.get("dynamics", "class_downgrade_persistence_months"))
+
+    @property
+    def class_upgrade_persistence_months(self) -> int:
+        return int(self.get("dynamics", "class_upgrade_persistence_months"))
+
+    def vehicle_substitution(self, key: str) -> float:
+        return float(self.raw["dynamics"]["vehicle_substitution"][key])

@@ -245,3 +245,63 @@ simulation:
   seed: 42
   default_oil_shock_pct: 0
   default_gov_response_level: 0
+
+# --------------------------------------------------------------
+# 12. TEMPORAL DYNAMICS (conditional moves over time)
+#    Shock ramp, lagged pass-through, coping ladder, erosion,
+#    policy lag, class persistence, vehicle substitution.
+# --------------------------------------------------------------
+dynamics:
+  shock_ramp_pct_per_month:
+    value: 10
+    source: "DOE weekly price cadence; PIDS 2026 immediate-but-not-instant impact"
+    note: "Effective shock rises/falls toward slider target each month"
+  pass_through_lags_months:
+    transport: 0
+    food: 1
+    utilities: 2
+    source: "LTFRB fares (0); PIDS food logistics (1); BSP oil-CPI utilities (2)"
+  persistence_shock_months_threshold:
+    value: 3
+    source: "David et al. sustained rice+fuel shock effects"
+    note: "Months of active shock before food pass-through fully adjusts"
+  persistence_food_pass_through_boost:
+    value: 1.05
+    source: "Supply chain full adjustment after sustained shock"
+  coping_ladder:
+    ratio_cut_other: 0.20
+    ratio_cut_transport: 0.12
+    ratio_cut_utilities: 0.08
+    ratio_cut_food: 0.08
+    transport_cut_max: 0.30
+    utility_cut_max: 0.20
+    food_cut_max: 0.30
+    post_buffer_food_cut_max: 0.40
+    post_buffer_months: 2
+    source: "Proposal Section 4.1 staged cuts; PIDS food vulnerability"
+  transport_worker_erosion_monthly:
+    value: 0.03
+    source: "PUV margin studies; proposal transport livelihood double-hit"
+  transport_worker_erosion_floor:
+    value: 0.70
+    source: "Minimum income retention for transport workers"
+  transport_worker_recovery_monthly:
+    value: 0.01
+    source: "Slow income recovery when fuel shock eases"
+  policy_activation_lag_months:
+    value: 2
+    source: "Pantawid / targeted cash aid disbursement lag"
+  policy_stress_boost_multiplier:
+    value: 1.25
+    source: "PIDS 2026 targeted support for distressed near-poor"
+  class_downgrade_persistence_months:
+    value: 2
+    source: "PIDS near-poor do not flip poverty status instantly"
+  class_upgrade_persistence_months:
+    value: 2
+    source: "Symmetric upgrade persistence rule"
+  vehicle_substitution:
+    ratio_threshold: 0.15
+    persistence_months: 2
+    car_to_motorcycle_intensity: 1.25
+    source: "DOE household transport downshift under price shock"
