@@ -153,7 +153,11 @@ def Monitors() -> None:
     solara.Markdown("### Monitors")
     with solara.GridFixed(columns=2):
         solara.Markdown(f"**Step**: {int(last['step'])}")
-        solara.Markdown(f"**Oil shock**: {last['oil_shock_pct']:.0f}%")
+        solara.Markdown(
+            f"**Oil shock (target / effective)**: "
+            f"{last['oil_shock_pct']:.0f}% / {last.get('effective_oil_shock_pct', last['oil_shock_pct']):.0f}%"
+        )
+        solara.Markdown(f"**Months under shock**: {int(last.get('months_shock_active', 0))}")
         solara.Markdown(f"**COL index**: {last['col_index']:.2f}")
         solara.Markdown(f"**Mean buying power**: PHP {last['mean_buying_power']:,.0f}")
         solara.Markdown(
@@ -168,6 +172,10 @@ def Monitors() -> None:
         )
         solara.Markdown(f"**Rural buying power**: PHP {last['buying_power_rural']:,.0f}")
         solara.Markdown(f"**Urban buying power**: PHP {last['buying_power_urban']:,.0f}")
+        solara.Markdown(
+            f"**Transport erosion (mean)**: {last.get('mean_income_erosion_factor', 1.0):.2f} | "
+            f"**Vehicle downgrades**: {int(last.get('vehicle_downgrade_count', 0))}"
+        )
 
 
 @solara.component
@@ -216,7 +224,8 @@ def Page() -> None:
             f"- <span style='color:{CLASS_COLORS['high']}'>Green</span>: high effective class\n"
             f"- <span style='color:{CLASS_COLORS['middle']}'>Orange</span>: middle\n"
             f"- <span style='color:{CLASS_COLORS['low']}'>Red</span>: low\n"
-            "- Light gray patches = urban core; pale green = rural"
+            "- Light gray patches = urban core; pale green = rural\n"
+            "- Effective shock ramps toward slider target (~10%/month)"
         )
     with solara.Column():
         WorldView()

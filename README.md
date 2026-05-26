@@ -132,6 +132,14 @@ support eligibility). Every month it:
 7. Updates `class_progress` ∈ [0, 1] used by the visualisation layer to
    interpolate red → orange → green continuously.
 
+**Conditional moves (RRL-backed, in `data/parameters.yaml` → `dynamics:`):**
+
+- **Coping ladder** — cuts follow buying-power ratio: other → transport → utilities → food; deeper food cuts after savings exhausted (BSP buffer data).
+- **Transport-worker erosion** — income erodes ~3%/month while shock is high (PUV margin studies).
+- **Vehicle substitution** — car owners downshift to motorcycle exposure after 2 stressed months.
+- **Class persistence** — downgrade/upgrade requires 2 consecutive months below/above thresholds (PIDS near-poor dynamics).
+- **Policy lag** — government support activates 2 months after shock onset; extra boost if prior-month food/bill stress.
+
 ### Component 3 — Environment
 
 File: [`pricehike_abm/environment/market.py`](pricehike_abm/environment/market.py)
@@ -145,6 +153,18 @@ domestic_fuel_multiplier = 1 + oil_shock_pct/100 * fuel_pass_through
 
 All fields are mutable so the Solara sliders can drive the simulation
 live.
+
+#### Temporal dynamics (`ShockDynamics`)
+
+File: [`pricehike_abm/environment/shock_dynamics.py`](pricehike_abm/environment/shock_dynamics.py)
+
+The slider sets a **target** shock; the **effective** shock ramps toward
+it at ~10%/month (DOE price cadence). Category pass-through uses **lags**
+(transport 0, food 1, utilities 2 months). After 3+ months of active
+shock, food pass-through gets a +5% persistence boost (David et al.).
+
+Dashboard monitors show **target / effective** shock and **months under
+shock** so the audience sees the war scenario build over time.
 
 ### Component 4 — Patches
 
@@ -167,7 +187,8 @@ Three response levels (proposal Section 4.2):
 | 1 | Moderate — targeted income transfer + 20% fuel subsidy for low-income or transport workers flagged as `gov_support_eligible`. |
 | 2 | Strong — broader targeted transfer (low + middle + transport workers) with a `_targeting_scale` that gives middle-income only half the support, mirroring PIDS' warning that blanket subsidies favour higher-income groups. |
 
-Policy effects only activate when `oil_shock_pct > 0`.
+Policy effects activate after `policy_activation_lag_months` once
+effective shock > 0.
 
 ### Component 6 — `PriceHikeModel`
 
@@ -184,7 +205,7 @@ File: [`pricehike_abm/metrics.py`](pricehike_abm/metrics.py)
 
 Reporters wired into `DataCollector`:
 
-- Time-series: COL index, mean buying power, class counts (high/middle/low), food-at-risk %, bill-stress %, mean spend per category, buying power by income class, rural vs urban buying power, current oil shock and fuel multiplier.
+- Time-series: COL index, mean buying power, class counts, stress shares, effective oil shock, months under shock, transport erosion, vehicle downgrades, rural vs urban buying power.
 - Per-agent: income class, effective class, location, employment type, buying power, ratio, category spend, stress flags, class progress.
 
 ### Component 8 — NetLogo-style dashboard
@@ -296,7 +317,9 @@ pricehike_simulation/
 - Partial-equilibrium model: no producer responses, no second-round wage effects, no remittance dynamics.
 - Pass-through coefficients are single point estimates from PIDS; sensitivity analysis with bootstrap ranges would tighten the conclusions.
 - Class migration uses a rule-based threshold with hysteresis; a richer specification could use Markov or survival models calibrated to longitudinal FIES panels.
-- The model converges in one month under a constant shock; time variation in the dashboard comes from user interaction with the sliders, not from intrinsic dynamics.
+- The model converges to a monthly equilibrium **per shock level**, but
+  now shows **transition dynamics**: shock ramp, lagged pass-through,
+  savings depletion, and delayed policy over 4–8 months.
 
 ## License
 

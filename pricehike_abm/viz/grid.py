@@ -42,7 +42,9 @@ def build_grid_figure(model: "PriceHikeModel") -> go.Figure:
             f"#{agent.unique_id} | {agent.income_class}/{agent.location}<br>"
             f"effective: {agent.snapshot.effective_class}<br>"
             f"buying power: PHP {agent.snapshot.buying_power:,.0f}<br>"
-            f"ratio: {agent.snapshot.buying_power_ratio:.2f}"
+            f"ratio: {agent.snapshot.buying_power_ratio:.2f}<br>"
+            f"vehicle: {agent.snapshot.effective_vehicle_type} | "
+            f"stress months: {agent.snapshot.months_under_stress}"
         )
 
     patch_layer = go.Heatmap(
@@ -73,7 +75,10 @@ def build_grid_figure(model: "PriceHikeModel") -> go.Figure:
 
     fig = go.Figure(data=[patch_layer, house_layer])
     fig.update_layout(
-        title=f"Step {model.steps} | shock={model.environment.oil_shock_pct:.0f}% | gov={model.policy.level}",
+        title=(
+            f"Step {model.steps} | target shock={model.environment.oil_shock_pct:.0f}% | "
+            f"effective={model.shock_dynamics.effective_shock_pct:.0f}% | gov={model.policy.level}"
+        ),
         xaxis=dict(visible=False, range=[-1, width]),
         yaxis=dict(visible=False, range=[-1, height], scaleanchor="x", scaleratio=1),
         margin=dict(l=10, r=10, t=40, b=10),

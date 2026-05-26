@@ -35,12 +35,20 @@ def _monotonic_decreasing(values: list[float]) -> bool:
 DOSE_RESPONSE_SCENARIOS = ["S0_baseline", "S1_small_shock", "S2_pids_current", "S3_severe_shock"]
 
 
+def _peak_col_index(scenario: str) -> float:
+    path = RUNS_DIR / f"{scenario}_model.csv"
+    if not path.exists():
+        return 0.0
+    df = pd.read_csv(path)
+    return float(df["col_index"].max())
+
+
 def evaluate() -> dict:
     summary = pd.read_csv(RUNS_DIR / "summary.csv")
     indexed = summary.set_index("scenario")
     dose = indexed.loc[DOSE_RESPONSE_SCENARIOS]
 
-    col_values = dose["col_index"].tolist()
+    col_values = [_peak_col_index(s) for s in DOSE_RESPONSE_SCENARIOS]
     bp_values = dose["mean_buying_power"].tolist()
     low_counts = dose["count_low"].tolist()
 
@@ -97,7 +105,7 @@ def as_markdown(verdict: dict) -> str:
     lines.append(f"**Overall verdict:** {'**H1 supported**' if verdict['supports_h1'] else '**H0 retained**'}\n")
     lines.append("| Criterion | Result |")
     lines.append("|-----------|--------|")
-    lines.append(f"| Dose-response (higher shock -> higher COL, lower buying power, more low-class) | "
+    lines.append(f"| Dose-response (higher shock -> higher peak COL, lower buying power, more low-class) | "
                  f"{yes if verdict['h1_dose_response'] else no} |")
     lines.append(f"| Policy mitigation (gov=2 vs gov=0 at +40% shock) | "
                  f"{yes if verdict['h1_policy_mitigation'] else no} |")
@@ -106,7 +114,7 @@ def as_markdown(verdict: dict) -> str:
     lines.append("")
     d = verdict["details"]
     lines.append("## Supporting numbers\n")
-    lines.append(f"- COL index (no-policy) across shock levels: {d['col_index_no_policy_path']}")
+    lines.append(f"- Peak COL index during run (no-policy): {d['col_index_no_policy_path']}")
     lines.append(f"- Mean buying power (no-policy): {d['mean_buying_power_no_policy_path']}")
     lines.append(f"- Low-class count (no-policy): {d['low_class_no_policy_path']}")
     lines.append(f"- Severe-shock real loss: low-income {d['low_income_loss_pct_severe']:.2f}% vs "

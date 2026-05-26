@@ -21,12 +21,12 @@ backup figures, and anticipated Q&A.
 ## Live demo script (5 minutes)
 
 1. **Open the dashboard.** `solara run pricehike_abm/app.py` → http://127.0.0.1:8765/.
-2. **Baseline.** Oil shock = 0. Press Step a few times. "Every house is green or orange; COL stays at 100; no households in the low class." Point at the world view and monitors.
-3. **Apply a war shock.** Slide oil shock to **+40%**. Press Step. "Watch the orange houses creep towards red, especially in the rural ring. The COL index rises above 100 and the low-class counter ticks up."
-4. **Push to severe.** Slide oil shock to **+60%**. Step a couple more times. "Now we see ~30 households slip into the red zone — these are the near-poor in PIDS' policy note."
-5. **Apply government response.** Switch the dropdown to **Level 2**. Step once. "Targeted transfers and a 40% fuel subsidy lift most families back; the red houses fade to orange or green within a month."
-6. **Stress the system.** Push fuel pass-through up, drop policy back to 0. "This is what happens if the government does nothing and oil firms pass everything through to the pump."
-7. **Reset and pivot to slides.** Press Reset → switch to slide 6 (scenario matrix).
+2. **Baseline.** Oil shock = 0. Press **Play** briefly. "COL stays at 100; houses stay green/orange."
+3. **Apply a war shock.** Slide oil shock to **+40%**. Press **Play** (do not spam Step). "Watch **effective shock** climb 10→20→30→40 in the monitors. COL rises over months 1–4 as transport, then food, then utilities catch up (lagged pass-through). Rural houses turn red before urban."
+4. **Let it run to month 6–8.** "Savings run out for no-buffer households; food-at-risk % ticks up. Transport workers show income erosion in the monitor."
+5. **Apply government response.** At month ~6, switch to **Level 2**. "Policy has a 2-month lag — relief appears around month 8, not instantly."
+6. **Pass-through demo.** With shock on, raise **food pass-through** slider. "This controls how fast food prices catch up after the fuel shock."
+7. **Reset and pivot to slides.** Press Reset → switch to scenario matrix slide.
 
 ## If the live demo fails
 
@@ -57,7 +57,13 @@ the same urban/rural asymmetry, and the same general targeting
 recommendation. Our model is qualitative — we don't claim to replicate
 the 1.34M number, only the directional and distributional patterns.
 
-**Q: Why are food-at-risk percentages near zero in the report?**
+**Q: Why do readings change month-to-month even if I don't touch sliders?**
+A: The model now includes temporal dynamics backed by RRL: shock ramp,
+lagged pass-through to food/utilities, savings depletion, transport-worker
+income erosion, and delayed policy. This mirrors how a real war shock
+builds over weeks and hits households progressively — not all at once.
+
+**Q: Why are food-at-risk percentages sometimes low in the report?**
 A: Households first draw down savings and trim the "other" budget before
 cutting food. In our 12-month run with synthetic savings buffers, very
 few agents fully exhaust their buffer. To trigger more food stress you

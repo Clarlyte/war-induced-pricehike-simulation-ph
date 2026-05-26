@@ -114,9 +114,30 @@ def gov_response_level(model: "PriceHikeModel") -> int:
     return int(model.policy.level)
 
 
+def effective_oil_shock_pct(model: "PriceHikeModel") -> float:
+    return float(model.shock_dynamics.effective_shock_pct)
+
+
+def months_shock_active(model: "PriceHikeModel") -> int:
+    return int(model.shock_dynamics.months_shock_active)
+
+
+def mean_income_erosion_factor(model: "PriceHikeModel") -> float:
+    values = [a.income_erosion_factor for a in model.agents]
+    return _mean_or_zero(values)
+
+
+def vehicle_downgrade_count(model: "PriceHikeModel") -> int:
+    return sum(
+        1 for a in model.agents if a.effective_vehicle_type != a.vehicle_type
+    )
+
+
 MODEL_REPORTERS: dict = {
     "step": lambda m: m.steps,
     "oil_shock_pct": oil_shock_pct,
+    "effective_oil_shock_pct": effective_oil_shock_pct,
+    "months_shock_active": months_shock_active,
     "fuel_multiplier": fuel_multiplier,
     "gov_response_level": gov_response_level,
     "col_index": col_index,
@@ -134,6 +155,8 @@ MODEL_REPORTERS: dict = {
     "buying_power_high": buying_power_high,
     "buying_power_rural": buying_power_rural,
     "buying_power_urban": buying_power_urban,
+    "mean_income_erosion_factor": mean_income_erosion_factor,
+    "vehicle_downgrade_count": vehicle_downgrade_count,
 }
 
 
@@ -150,4 +173,7 @@ AGENT_REPORTERS: dict = {
     "food_at_risk": lambda a: a.snapshot.food_at_risk,
     "bill_stress": lambda a: a.snapshot.bill_stress,
     "class_progress": lambda a: a.snapshot.class_progress,
+    "income_erosion_factor": lambda a: a.income_erosion_factor,
+    "effective_vehicle_type": lambda a: a.effective_vehicle_type,
+    "months_under_stress": lambda a: a.snapshot.months_under_stress,
 }
