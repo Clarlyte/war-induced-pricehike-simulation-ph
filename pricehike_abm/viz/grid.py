@@ -1,8 +1,8 @@
 """Patch grid renderer using Plotly.
 
-Renders the rural/urban backdrop and the agent houses as a single
-heatmap-plus-scatter Plotly figure suitable for embedding in a Solara
-component and refreshing every simulation tick.
+Renders the rural/urban backdrop as static layout shapes and agent houses
+as a single scatter trace. The patch layer is cached so live dashboard
+updates only mutate household marker colors and hover text.
 """
 
 from __future__ import annotations
@@ -16,16 +16,54 @@ from pricehike_abm.viz.colors import PATCH_COLORS, gradient_color
 if TYPE_CHECKING:
     from pricehike_abm.model import PriceHikeModel
 
+_PATCH_SHAPE_CACHE: dict[tuple[int, int, int], list[dict]] = {}
 
-def build_grid_figure(model: "PriceHikeModel") -> go.Figure:
-    """Build a Plotly figure showing patches and agent houses."""
-    width = model.patches.width
-    height = model.patches.height
 
-    patch_matrix = [[0] * width for _ in range(height)]
-    for (x, y), t in model.patches.patch_types.items():
-        patch_matrix[y][x] = 0 if t == "urban" else 1
+def build_patch_shapes(
+    width: int,
+    height: int,
+    patch_types: dict[tuple[int, int], str],
+) -> list[dict]:
+    """Return Plotly layout shape dicts for each rural/urban cell."""
+    shapes: list[dict] = []
+    for x in range(width):
+        for y in range(height):
+            patch_type = patch_types.get((x, y), "rural")
+            shapes.append(
+                dict(
+                    type="rect",
+                    x0=x - 0.5,
+                    x1=x + 0.5,
+                    y0=y - 0.5,
+                    y1=y + 0.5,
+                    fillcolor=PATCH_COLORS[patch_type],
+                    line=dict(width=0),
+                    layer="below",
+                )
+            )
+    return shapes
 
+
+def get_cached_patch_shapes(model: "PriceHikeModel") -> list[dict]:
+    """Return cached patch shapes for the model grid dimensions."""
+    key = (
+        model.patches.width,
+        model.patches.height,
+        model.params.urban_core_radius,
+    )
+    if key not in _PATCH_SHAPE_CACHE:
+        _PATCH_SHAPE_CACHE[key] = build_patch_shapes(
+            model.patches.width,
+            model.patches.height,
+            model.patches.patch_types,
+        )
+    return _PATCH_SHAPE_CACHE[key]
+
+
+def extract_household_trace_data(
+    model: "PriceHikeModel",
+) -> tuple[list[float], list[float], list[str], list[str]]:
+    """Extract scatter coordinates, colors, and hover text for all agents."""
     xs: list[float] = []
     ys: list[float] = []
     colors: list[str] = []
@@ -35,8 +73,8 @@ def build_grid_figure(model: "PriceHikeModel") -> go.Figure:
         if pos is None:
             continue
         x, y = pos
-        xs.append(x)
-        ys.append(y)
+        xs.append(float(x))
+        ys.append(float(y))
         colors.append(gradient_color(agent.snapshot.class_progress))
         hovers.append(
             f"#{agent.unique_id} | {agent.income_class}/{agent.location}<br>"
@@ -46,19 +84,41 @@ def build_grid_figure(model: "PriceHikeModel") -> go.Figure:
             f"vehicle: {agent.snapshot.effective_vehicle_type} | "
             f"stress months: {agent.snapshot.months_under_stress}"
         )
+    return xs, ys, colors, hovers
 
-    patch_layer = go.Heatmap(
-        z=patch_matrix,
-        x=list(range(width)),
-        y=list(range(height)),
-        colorscale=[[0.0, PATCH_COLORS["urban"]], [1.0, PATCH_COLORS["rural"]]],
-        showscale=False,
-        hoverinfo="skip",
-        zmin=0,
-        zmax=1,
+
+def grid_layout(model: "PriceHikeModel") -> dict:
+    """Shared layout dict for grid figures (live and static export)."""
+    width = model.patches.width
+    height = model.patches.height
+    return dict(
+        title="Household map",
+        uirevision="grid",
+        shapes=get_cached_patch_shapes(model),
+        xaxis=dict(visible=False, range=[-1, width], fixedrange=True),
+        yaxis=dict(
+            visible=False,
+            range=[-1, height],
+            scaleanchor="x",
+            scaleratio=1,
+            fixedrange=True,
+        ),
+        margin=dict(l=10, r=10, t=40, b=10),
+        height=520,
+        plot_bgcolor="white",
+        hovermode="closest",
     )
 
-    house_layer = go.Scatter(
+
+def build_household_scatter(
+    xs: list[float],
+    ys: list[float],
+    colors: list[str],
+    hovers: list[str],
+) -> go.Scatter:
+    """Build the household scatter trace with a stable uid."""
+    return go.Scatter(
+        uid="households",
         x=xs,
         y=ys,
         mode="markers",
@@ -73,16 +133,27 @@ def build_grid_figure(model: "PriceHikeModel") -> go.Figure:
         name="Households",
     )
 
-    fig = go.Figure(data=[patch_layer, house_layer])
-    fig.update_layout(
-        title=(
-            f"Step {model.steps} | target shock={model.environment.oil_shock_pct:.0f}% | "
-            f"effective={model.shock_dynamics.effective_shock_pct:.0f}% | gov={model.policy.level}"
-        ),
-        xaxis=dict(visible=False, range=[-1, width]),
-        yaxis=dict(visible=False, range=[-1, height], scaleanchor="x", scaleratio=1),
-        margin=dict(l=10, r=10, t=40, b=10),
-        height=520,
-        plot_bgcolor="white",
+
+def create_grid_figure_widget(model: "PriceHikeModel") -> go.FigureWidget:
+    """Create a FigureWidget for the live dashboard grid."""
+    xs, ys, colors, hovers = extract_household_trace_data(model)
+    fig = go.FigureWidget(
+        data=[build_household_scatter(xs, ys, colors, hovers)],
+        layout=grid_layout(model),
     )
+    return fig
+
+
+def update_grid_figure_widget(fig: go.FigureWidget, model: "PriceHikeModel") -> None:
+    """Update household colors and hover text in place."""
+    _, _, colors, hovers = extract_household_trace_data(model)
+    fig.data[0].marker.color = colors
+    fig.data[0].text = hovers
+
+
+def build_grid_figure(model: "PriceHikeModel") -> go.Figure:
+    """Build a static Plotly figure showing patches and agent houses."""
+    xs, ys, colors, hovers = extract_household_trace_data(model)
+    fig = go.Figure(data=[build_household_scatter(xs, ys, colors, hovers)])
+    fig.update_layout(**grid_layout(model))
     return fig

@@ -31,7 +31,7 @@ from pricehike_abm.viz.charts import (
     stress_chart,
 )
 from pricehike_abm.viz.colors import CLASS_COLORS
-from pricehike_abm.viz.grid import build_grid_figure
+from pricehike_abm.viz.live_plotly import LiveChartFigure, LiveGridFigure
 
 
 def _new_model(
@@ -61,6 +61,7 @@ trans_pt = solara.reactive(0.70)
 speed_ticks_per_sec = solara.reactive(2.0)
 playing = solara.reactive(False)
 tick_counter = solara.reactive(0)
+reset_token = solara.reactive(0)
 
 _model_holder: dict[str, PriceHikeModel] = {
     "model": _new_model(0.0, 0, 0.35, 0.25, 0.35, 0.70)
@@ -81,6 +82,7 @@ def reset_model() -> None:
         trans_pt.value,
     )
     tick_counter.value = 0
+    reset_token.value += 1
 
 
 def push_controls() -> None:
@@ -145,6 +147,7 @@ def Controls() -> None:
 
 @solara.component
 def Monitors() -> None:
+    _ = tick_counter.value
     model = get_model()
     df = model.datacollector.get_model_vars_dataframe()
     last = df.iloc[-1] if not df.empty else None
@@ -180,22 +183,22 @@ def Monitors() -> None:
 
 @solara.component
 def WorldView() -> None:
-    _ = tick_counter.value
+    tick = tick_counter.value
     model = get_model()
-    fig = build_grid_figure(model)
-    solara.FigurePlotly(fig)
+    LiveGridFigure(model, tick, reset_token.value)
 
 
 @solara.component
 def Charts() -> None:
-    _ = tick_counter.value
+    tick = tick_counter.value
     model = get_model()
+    token = reset_token.value
     with solara.GridFixed(columns=2):
-        solara.FigurePlotly(class_count_chart(model))
-        solara.FigurePlotly(col_index_chart(model))
-        solara.FigurePlotly(buying_power_chart(model))
-        solara.FigurePlotly(stress_chart(model))
-    solara.FigurePlotly(rural_vs_urban_chart(model))
+        LiveChartFigure(class_count_chart, model, tick, token)
+        LiveChartFigure(col_index_chart, model, tick, token)
+        LiveChartFigure(buying_power_chart, model, tick, token)
+        LiveChartFigure(stress_chart, model, tick, token)
+    LiveChartFigure(rural_vs_urban_chart, model, tick, token)
 
 
 @solara.component
