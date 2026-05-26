@@ -1,16 +1,8 @@
 """Government policy module.
 
-Three response levels from the proposal (Section 4.2):
-    0 - No response (baseline / counterfactual)
-    1 - Moderate: targeted income transfer + partial fuel subsidy for
-        low-income and transport workers
-    2 - Strong: broader targeted transfer + larger fuel subsidy that
-        still concentrates on vulnerable groups (PIDS 2026 warns that
-        blanket subsidies disproportionately benefit higher-income
-        households).
-
-Returns a per-agent effect dict so the HouseholdAgent can apply it
-inside its step() without needing to know any policy internals.
+Three response levels from the proposal (Section 4.2), with temporal
+dynamics: activation lag after shock onset and extra support for
+households that showed food or bill stress in the prior month.
 """
 
 from __future__ import annotations
@@ -23,6 +15,7 @@ from pricehike_abm.environment.market import MarketEnvironment
 
 if TYPE_CHECKING:
     from pricehike_abm.agents.household import HouseholdAgent
+    from pricehike_abm.environment.shock_dynamics import ShockDynamics
 
 
 @dataclass
@@ -41,18 +34,13 @@ class GovernmentPolicy:
         agent: "HouseholdAgent",
         env: MarketEnvironment,
         params: Parameters,
+        shock_dynamics: "ShockDynamics",
     ) -> dict[str, float]:
-        """Resolve the per-agent income boost and fuel subsidy in PHP.
-
-        Returns:
-            {
-                "income_boost": PHP added to effective income this step,
-                "fuel_subsidy_pct": fraction (0..1) deducted from transport
-                                    + private fuel spending.
-            }
-        """
+        """Resolve per-agent income boost and fuel subsidy for this month."""
         no_effect = {"income_boost": 0.0, "fuel_subsidy_pct": 0.0}
-        if self.level == 0 or env.oil_shock_pct <= 0:
+        if self.level == 0 or shock_dynamics.effective_shock_pct <= 0:
+            return no_effect
+        if shock_dynamics.months_shock_active < params.policy_activation_lag_months:
             return no_effect
 
         cfg: dict[str, Any] = params.government_response(self.level)
@@ -65,6 +53,9 @@ class GovernmentPolicy:
         scale = self._targeting_scale(agent)
         income_boost = agent.monthly_income_php * float(cfg["targeted_income_boost"]) * scale
         fuel_subsidy_pct = float(cfg["fuel_subsidy_pct"]) * scale
+
+        if agent.last_food_at_risk or agent.last_bill_stress:
+            income_boost *= params.policy_stress_boost_multiplier
 
         return {
             "income_boost": income_boost,
@@ -82,12 +73,6 @@ class GovernmentPolicy:
 
     @staticmethod
     def _targeting_scale(agent: "HouseholdAgent") -> float:
-        """Per-agent support intensity.
-
-        Low-income and transport workers receive full support, middle-income
-        receives partial. This mirrors PIDS 2026's warning that blanket
-        subsidies disproportionately benefit higher-income households.
-        """
         if agent.income_class == "low" or agent.employment_type == "transport_worker":
             return 1.0
         if agent.income_class == "middle":
