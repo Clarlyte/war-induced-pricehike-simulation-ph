@@ -1,0 +1,247 @@
+# =====================================================================
+# Parameters for the Philippine fuel-shock ABM
+# Every value carries a `source` and `note` for academic auditability.
+# Edit this file (no code change) to re-calibrate the model.
+# =====================================================================
+
+meta:
+  model_name: pricehike_abm
+  version: 0.1.0
+  time_step: month
+  currency: PHP
+  base_year: 2023
+
+# --------------------------------------------------------------
+# 1. INCOME CLASSES
+#    Bracket midpoints used as nominal monthly income (PHP).
+#    Three-class collapse of PSA / PIDS deciles for tractability.
+# --------------------------------------------------------------
+income_classes:
+  low:
+    monthly_income_php:
+      value: 14000
+      source: "PSA FIES 2023; PIDS poverty thresholds"
+      note: "Approx. bottom 4 deciles average; near-poor / poor band"
+    share_of_population:
+      value: 0.40
+      source: "PSA FIES 2023 decile distribution"
+      note: "Bottom 40% of households"
+  middle:
+    monthly_income_php:
+      value: 32000
+      source: "PSA FIES 2023; PIDS middle-class definition"
+      note: "Deciles 5-8 average"
+    share_of_population:
+      value: 0.40
+      source: "PSA FIES 2023"
+      note: "Middle 40%"
+  high:
+    monthly_income_php:
+      value: 95000
+      source: "PSA FIES 2023; top 20% mean"
+      note: "Deciles 9-10 average"
+    share_of_population:
+      value: 0.20
+      source: "PSA FIES 2023"
+      note: "Top 20%"
+
+# --------------------------------------------------------------
+# 2. EXPENDITURE SHARES (% of monthly income)
+#    Source: PSA FIES 2023 COICOP shares + PIDS 2026 policy note
+#    (poor households allocate ~57% of spending to food).
+#    Shares sum to 1.0 per class.
+# --------------------------------------------------------------
+expenditure_shares:
+  low:
+    food: 0.50
+    utilities: 0.13
+    transport: 0.10
+    other: 0.27
+    source: "PSA FIES 2023; PIDS 2026 (Albert) - poor spend 57% on food chain"
+  middle:
+    food: 0.38
+    utilities: 0.12
+    transport: 0.14
+    other: 0.36
+    source: "PSA FIES 2023 COICOP middle deciles"
+  high:
+    food: 0.22
+    utilities: 0.09
+    transport: 0.16
+    other: 0.53
+    source: "PSA FIES 2023 COICOP top deciles"
+
+# --------------------------------------------------------------
+# 3. PASS-THROUGH COEFFICIENTS
+#    Multipliers applied to fuel-price change to derive
+#    category-level inflation. Defaults match PIDS 2026 scenario.
+# --------------------------------------------------------------
+pass_through:
+  fuel_pass_through:
+    value: 0.35
+    source: "PIDS 2026 - Albert et al., current scenario at USD 105/bbl"
+    note: "Share of global oil price change reaching domestic pumps"
+  food:
+    value: 0.25
+    source: "PIDS 2008 (David et al.) Rice & Fuel Poverty study"
+    note: "Energy-intensity of agri/logistics supply chain"
+  utilities:
+    value: 0.35
+    source: "BSP discussion paper on oil shocks; DOE generation mix"
+    note: "Electricity (oil/gas plants) + water pumping share"
+  transport:
+    value: 0.70
+    source: "LTFRB fare petitions; PIDS pass-through tables"
+    note: "Fares and private fuel costs respond strongly to pump prices"
+
+# --------------------------------------------------------------
+# 4. LOCATION (PATCH) MODIFIERS
+#    Multipliers applied to the relevant expenditure share or
+#    pass-through to reflect rural vs urban heterogeneity.
+# --------------------------------------------------------------
+location_modifiers:
+  rural:
+    food_share_multiplier:
+      value: 1.12
+      source: "PIDS 2026 - rural poverty hit 1.5pp vs 0.9pp urban"
+      note: "Higher food share + farm fuel exposure"
+    transport_pass_through_multiplier:
+      value: 1.10
+      source: "PIDS 2026 - fuel-intensive agriculture"
+    population_share:
+      value: 0.55
+      source: "PSA 2020 Census - 53% rural"
+  urban:
+    food_share_multiplier:
+      value: 1.00
+      source: "PIDS 2026 baseline"
+    transport_pass_through_multiplier:
+      value: 1.05
+      source: "Public transit fare elasticity to diesel"
+    population_share:
+      value: 0.45
+      source: "PSA 2020 Census"
+
+# --------------------------------------------------------------
+# 5. EMPLOYMENT TYPE EXPOSURE
+#    Extra fuel sensitivity for jobs depending on transport.
+# --------------------------------------------------------------
+employment_exposure:
+  transport_worker:
+    income_sensitivity:
+      value: -0.40
+      source: "Proposal Section 4.1; LTFRB / PUVMP studies"
+      note: "40% of net income exposed to fuel price increases"
+    population_share: 0.12
+  non_transport:
+    income_sensitivity:
+      value: 0.0
+      source: "Baseline"
+    population_share: 0.58
+  self_employed:
+    income_sensitivity:
+      value: -0.15
+      source: "DTI MSME surveys; sari-sari & vendor margins"
+    population_share: 0.30
+
+# --------------------------------------------------------------
+# 6. VEHICLE OWNERSHIP
+# --------------------------------------------------------------
+vehicle_exposure:
+  none:
+    fuel_intensity_multiplier:
+      value: 1.00
+      source: "Public transport users feel fuel shock only via fare adjustment"
+    population_share: 0.55
+  motorcycle:
+    fuel_intensity_multiplier:
+      value: 1.25
+      source: "DOE household energy survey; motorcycle owners pay direct pump price + fares"
+    population_share: 0.30
+  car:
+    fuel_intensity_multiplier:
+      value: 1.55
+      source: "DOE/DOTr commuter data; car owners have highest direct fuel exposure"
+    population_share: 0.15
+
+# --------------------------------------------------------------
+# 7. SAVINGS BUFFERS
+#    Months of essential expenses covered by savings.
+# --------------------------------------------------------------
+savings_buffer:
+  none:
+    months_covered: 0
+    population_share: 0.45
+    source: "BSP Consumer Expectations Survey - ~45% have no savings"
+  one_month:
+    months_covered: 1
+    population_share: 0.35
+    source: "BSP CES + FIES"
+  three_plus:
+    months_covered: 3
+    population_share: 0.20
+    source: "BSP CES top income brackets"
+
+# --------------------------------------------------------------
+# 8. GOVERNMENT RESPONSE LEVELS
+#    Applied each step as conditional income / cost offsets.
+# --------------------------------------------------------------
+government_response:
+  level_0:
+    label: "No response"
+    targeted_income_boost: 0.0
+    fuel_subsidy_pct: 0.0
+    source: "Baseline / counterfactual"
+  level_1:
+    label: "Moderate (targeted)"
+    targeted_income_boost: 0.08
+    fuel_subsidy_pct: 0.20
+    target_groups: [low, transport_worker]
+    source: "PIDS 2026 recommendation: targeted Pantawid + fuel cards"
+  level_2:
+    label: "Strong (broader targeted)"
+    targeted_income_boost: 0.15
+    fuel_subsidy_pct: 0.40
+    target_groups: [low, middle, transport_worker]
+    source: "PIDS 2026 - countercyclical fiscal response; warns against blanket VAT suspension"
+
+# --------------------------------------------------------------
+# 9. CLASS MIGRATION THRESHOLDS
+#    Buying-power ratio = (income - essentials) / income,
+#    where essentials = food + utilities + transport (proposal Sec. 4.1).
+#    Hysteresis prevents flickering month-to-month.
+# --------------------------------------------------------------
+class_thresholds:
+  high_threshold:
+    value: 0.30
+    note: "buying_power_ratio >= 0.30 -> effective class = high"
+  middle_threshold:
+    value: 0.12
+    note: "0.12 <= ratio < 0.30 -> middle; ratio < 0.12 -> low"
+  hysteresis:
+    value: 0.03
+    note: "Upgrade requires +3pp beyond boundary to avoid month-to-month flicker"
+
+# --------------------------------------------------------------
+# 10. STRESS FLAG THRESHOLDS
+# --------------------------------------------------------------
+stress_thresholds:
+  food_at_risk_ratio:
+    value: 0.85
+    note: "Triggered when actual food spending falls below 85% of baseline need"
+  bill_stress_ratio:
+    value: 0.90
+    note: "Triggered when utilities spending falls below 90% of bill"
+
+# --------------------------------------------------------------
+# 11. SIMULATION DEFAULTS
+# --------------------------------------------------------------
+simulation:
+  num_agents: 150
+  grid_width: 20
+  grid_height: 20
+  urban_core_radius: 5
+  default_months: 12
+  seed: 42
+  default_oil_shock_pct: 0
+  default_gov_response_level: 0
