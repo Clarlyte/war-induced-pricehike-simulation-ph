@@ -26,6 +26,7 @@ from pricehike_abm.agents.household import HouseholdAgent
 from pricehike_abm.config import Parameters
 from pricehike_abm.environment.market import MarketEnvironment
 from pricehike_abm.environment.patches import PatchGrid
+from pricehike_abm.environment.shock_dynamics import ShockDynamics
 from pricehike_abm.metrics import AGENT_REPORTERS, MODEL_REPORTERS
 from pricehike_abm.policies.government import GovernmentPolicy
 
@@ -58,6 +59,11 @@ class PriceHikeModel(mesa.Model):
             food_pass_through=food_pass_through,
             utilities_pass_through=utilities_pass_through,
             transport_pass_through=transport_pass_through,
+        )
+
+        self.shock_dynamics: ShockDynamics = ShockDynamics.create(
+            target_shock_pct=oil_shock_pct,
+            max_lag=self.params.max_pass_through_lag,
         )
 
         self.policy: GovernmentPolicy = GovernmentPolicy(level=gov_response_level)
@@ -125,6 +131,7 @@ class PriceHikeModel(mesa.Model):
     # Step
     # ------------------------------------------------------------------
     def step(self) -> None:  # noqa: D401 - Mesa hook
+        self.shock_dynamics.advance(self.params)
         self.agents.do("step")
         self.datacollector.collect(self)
 
@@ -141,8 +148,10 @@ class PriceHikeModel(mesa.Model):
         transport_pass_through: float | None = None,
     ) -> None:
         """Update sliders/dropdowns from the dashboard without restarting."""
+        if oil_shock_pct is not None:
+            self.environment.oil_shock_pct = float(oil_shock_pct)
+            self.shock_dynamics.set_target(float(oil_shock_pct))
         self.environment.update(
-            oil_shock_pct=oil_shock_pct,
             fuel_pass_through=fuel_pass_through,
             food_pass_through=food_pass_through,
             utilities_pass_through=utilities_pass_through,
