@@ -1,0 +1,62 @@
+# =====================================================================
+# Scenario matrix for batch experiments.
+# Combines proposal Section 5.2 independent variables:
+#   - oil shock intensity (0 / 20 / 40 / 60 %)
+#   - pass-through (low vs PIDS-aligned high)
+#   - government response (0 / 1 / 2)
+# Run with:
+#   python -m experiments.run_scenarios
+# =====================================================================
+
+defaults:
+  months: 12
+  num_agents: 150
+
+scenarios:
+  - name: S0_baseline
+    description: "Counterfactual: no war shock, no government response."
+    oil_shock_pct: 0
+    fuel_pass_through: 0.35
+    gov_response_level: 0
+
+  - name: S1_small_shock
+    description: "+20% global oil shock at the PIDS pass-through baseline."
+    oil_shock_pct: 20
+    fuel_pass_through: 0.35
+    gov_response_level: 0
+
+  - name: S2_pids_current
+    description: "Current PIDS 2026 scenario: +40% shock at 35% pass-through."
+    oil_shock_pct: 40
+    fuel_pass_through: 0.35
+    gov_response_level: 0
+
+  - name: S3_severe_shock
+    description: "Severe disruption: +60% shock, high pass-through (USD 145/bbl)."
+    oil_shock_pct: 60
+    fuel_pass_through: 0.50
+    gov_response_level: 0
+
+  - name: S4_pids_current_gov1
+    description: "PIDS-current shock under moderate (targeted) government response."
+    oil_shock_pct: 40
+    fuel_pass_through: 0.35
+    gov_response_level: 1
+
+  - name: S5_pids_current_gov2
+    description: "PIDS-current shock under strong (broader targeted) response."
+    oil_shock_pct: 40
+    fuel_pass_through: 0.35
+    gov_response_level: 2
+
+  - name: S6_severe_gov2
+    description: "Severe shock with the strongest policy response (stress test)."
+    oil_shock_pct: 60
+    fuel_pass_through: 0.50
+    gov_response_level: 2
+
+  - name: S7_low_passthrough
+    description: "Same +40% shock but government absorbs more of the pump-price hike."
+    oil_shock_pct: 40
+    fuel_pass_through: 0.20
+    gov_response_level: 0
